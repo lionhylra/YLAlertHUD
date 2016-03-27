@@ -124,7 +124,11 @@ public class YLAlertHUD: UIView {
         clipsToBounds = true
         alpha = 0
         userInteractionEnabled = false
-        NSNotificationCenter.defaultCenter().addObserver(self, selector: Selector("deviceOrientationDidChange:"), name: UIDeviceOrientationDidChangeNotification, object: nil)
+        #if swift(>=2.2)
+            NSNotificationCenter.defaultCenter().addObserver(self, selector: #selector(self.deviceOrientationDidChange(_:)), name: UIDeviceOrientationDidChangeNotification, object: nil)
+        #else
+            NSNotificationCenter.defaultCenter().addObserver(self, selector: Selector("deviceOrientationDidChange:"), name: UIDeviceOrientationDidChangeNotification, object: nil)
+        #endif
     }
 
     
@@ -246,21 +250,62 @@ public class YLAlertHUD: UIView {
 
 // MARK: - Public Method
 extension YLAlertHUD{
-    public static func showHUDAddedToView(view:UIView, animated:Bool = true, hideAfterDelay delay:NSTimeInterval? = 1.5, multipleInstances:Bool = false, configuration:((YLAlertHUD)->Void)?=nil) -> YLAlertHUD{
-        let HUD:YLAlertHUD
-        let currentHUD = HUDForView(view)
-        if !multipleInstances && currentHUD != nil{
-            HUD = currentHUD!
-            configuration?(HUD)
-        }else{
-            HUD = YLAlertHUD(view: view, configuration: configuration)
-        }
-        if let delay = delay {
-            HUD.show(animated, hideAfterDelay: delay)
-        }else{
-            HUD.show(animated)
-        }
-        return HUD
+//    public static func showHUDAddedToView(view:UIView, animated:Bool = true, hideAfterDelay delay:NSTimeInterval? = 1.5, multipleInstances:Bool = false, configuration:((YLAlertHUD)->Void)?=nil) -> YLAlertHUD{
+//        let HUD:YLAlertHUD
+//        let currentHUD = HUDForView(view)
+//        if !multipleInstances && currentHUD != nil{
+//            HUD = currentHUD!
+//            configuration?(HUD)
+//        }else{
+//            HUD = YLAlertHUD(view: view, configuration: configuration)
+//        }
+//        if let delay = delay {
+//            HUD.show(animated:animated, hideAfterDelay: delay)
+//        }else{
+//            HUD.show(animated:animated)
+//        }
+//        return HUD
+//    }
+    
+    public static func showHUDaddedToView(
+        view:UIView,
+        title:String?,
+        image:UIImage? = nil,
+        animated:Bool = true,
+        hidesAfterDelay delay:NSTimeInterval? = 1.5,
+        replaceExisting:Bool = false,
+        theme:YLAlertHUDTheme = .Light,
+        backgroundStyle:YLAlertHUDBackgroundStyle = .Blur,
+        position:YLAlertHUDPosition = .Center) ->YLAlertHUD{
+            
+            let configuration = {(HUD:YLAlertHUD)->Void in
+                HUD.label.text = title
+                HUD.imageView.image = image
+                HUD.theme = theme
+                HUD.backgroundStyle = backgroundStyle
+                HUD.position = position
+            }
+            let HUD:YLAlertHUD
+            let currentHUD = HUDForView(view)
+            if !replaceExisting && currentHUD != nil {
+                HUD = currentHUD!
+                configuration(HUD)
+            }else{
+                
+                if currentHUD != nil {
+                    currentHUD?.hide(animated: false)
+                }
+                
+                HUD = YLAlertHUD(view: view, configuration: configuration)
+                
+            }
+            
+            if let delay = delay {
+                HUD.show(animated:animated, hideAfterDelay: delay)
+            }else{
+                HUD.show(animated:animated)
+            }
+            return HUD
     }
     
     public static func HUDForView(view:UIView) -> YLAlertHUD? {
@@ -273,7 +318,7 @@ extension YLAlertHUD{
     }
     
     // MARK: Show HUD
-    public func show(animated:Bool){
+    public func show(animated animated:Bool){
         if animated {
             UIView.animateWithDuration(showingAnimationDuration, delay: 0, options: [UIViewAnimationOptions.BeginFromCurrentState], animations: { () -> Void in
                 self.alpha = 1
@@ -283,7 +328,7 @@ extension YLAlertHUD{
         }
     }
     
-    public func show(animated:Bool, hideAfterDelay delay:NSTimeInterval){
+    public func show(animated animated:Bool, hideAfterDelay delay:NSTimeInterval){
         
         if animated {
             UIView.animateWithDuration(showingAnimationDuration, delay: 0, options: [UIViewAnimationOptions.BeginFromCurrentState], animations: { () -> Void in
@@ -292,9 +337,9 @@ extension YLAlertHUD{
                     if completed {
                         UIView.animateWithDuration(self.hidingAnimationDuration, delay: delay, options: [], animations: {() -> Void in
                             self.alpha = 0
-                            }, completion: {[unowned self] (completed) -> Void in
+                            }, completion: {[weak self] (completed) -> Void in
                                 if completed {
-                                    self.removeFromSuperview()
+                                    self?.removeFromSuperview()
                                 }
                             })
                     }
@@ -313,7 +358,7 @@ extension YLAlertHUD{
     }
     
     // MARK: Hide HUD
-    public func hide(animated:Bool){
+    public func hide(animated animated:Bool){
         if animated {
             UIView.animateWithDuration(self.hidingAnimationDuration, delay: 0, options: [], animations: {() -> Void in
                 self.alpha = 0
